@@ -1,3 +1,13 @@
+# Mac OS X stuff.
 *.DS_Store
+
+# Audio.
 *.wav
 *.mp3
+
+# Matlab open files.
+*.m~
+
+# Logs.
+*.txt
+

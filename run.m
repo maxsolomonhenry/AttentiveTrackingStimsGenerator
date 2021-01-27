@@ -1,9 +1,5 @@
-# Attentive Tracking Experiment
-Matlab scripts for generating stimuli for attentive tracking experiment based on musical duets.
-
-Use `run.m`
-
-```
+% Max Henry, for MPCL/McGill Attentive Tracking Experiment. 2020/2021.
+%
 % This generates stimuli from all audio in '/audio/raw'
 %
 % For the moment, this assumes that only matched pairs are in the raw audio
@@ -31,4 +27,12 @@ Use `run.m`
 %   M[melody]_P1_[inst1]_P2_[inst2]_V_P1.wav -->    mixture, vibrato in 1st 
 %   M[melody]_P1_[inst1]_P2_[inst2]_N.wav    -->    mixture, vibrato in 2nd
 %
-```
+
+AUDIO_DIR = './audio';
+RawPath = fullfile(AUDIO_DIR, 'raw/*.wav');
+RawFiles = dir(RawPath);
+
+% Process every pair (every second entry).
+for k = 1:2:length(rawFiles)
+    StimulusGenerator(RawFiles(k).name, RawFiles(k+1).name);
+end

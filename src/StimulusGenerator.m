@@ -67,7 +67,7 @@ classdef StimulusGenerator < handle
         VIB_RATE = 11;
         VIB_ALPHA = 0.005;
         VIB_CYCLES = 3;
-        NO_VIB_BUFFER = 1.5;
+        NO_VIB_BUFFER = 2;
         
         %   Settings for cues.
         CUE_LENGTH = 1.5;
@@ -78,7 +78,8 @@ classdef StimulusGenerator < handle
         EPS = 0.01;
         
         %   Directory with individual tracks.
-        STIM_DIR = "stims/";
+        STIM_DIR = "audio/processed/";
+        LOG_DIR = "logs/";
     end
     
     methods
@@ -102,7 +103,8 @@ classdef StimulusGenerator < handle
             obj.makeVibStim();
             obj.makeMixes();
             obj.makeCues();
-            obj.makeLog()
+            
+            obj.writeStimuli();
         end
         
         function obj = parseFilenames(obj)
@@ -284,9 +286,12 @@ classdef StimulusGenerator < handle
         function makeLog(obj)
             LogFilename = obj.MelodyNum + "_" + obj.Instrument1 + ...
                 "_" + obj.Instrument2 + "_log.txt";
+            
+            LogPath = fullfile(obj.LOG_DIR, LogFilename);
+            
             Today = datestr(datetime);
             
-            fid = fopen(LogFilename, 'wt');
+            fid = fopen(LogPath, 'wt');
             fprintf(fid, "Gain change x1:\t%s\n", obj.GainChange1);
             fprintf(fid, "Gain change x2:\t%s\n", obj.GainChange2);
             fprintf(fid, obj.Filename1 + "\t vib start:\t%s\n", obj.x1VibStart);
