@@ -51,11 +51,12 @@ classdef RandomVibrato < handle
     properties (Constant)
         AMP_ENV_SMOOTHING = 400;
         AMP_THRESHOLD = 0.01;
+        VIB_EFFECTIVE_LENGTH = 0.75;
     end
     
     methods
         
-        %   Constructor
+        % Constructor
         function obj = RandomVibrato(fs, VibRate, Alpha, ...
                 Cycles, NoVibBuffer)
 
@@ -67,7 +68,7 @@ classdef RandomVibrato < handle
             obj.VibratoLength = floor(fs/obj.VibRate*Cycles);
         end
         
-        %   Main method, adds vibrato given input signal.
+        % Main method, adds vibrato given input signal.
         function Out = addVibrato(obj, Signal)
             obj.Signal = Signal;
             
@@ -82,16 +83,27 @@ classdef RandomVibrato < handle
         end
         
         function obj = makeCandidateTimeline(obj)            
-            %   Introduce "no vib buffer" at start/end.
+            % Introduce "no vib buffer" at start/end.
             obj.CandidateTimeline = [zeros(obj.NoVibBufSamps, 1); ...
                 ones(length(obj.Signal) - 2 * obj.NoVibBufSamps, 1); ...
                 zeros(obj.NoVibBufSamps, 1)];   
             
-            Envelope = obj.traceEnvelope(obj.Signal);
-            AboveThreshold = (Envelope > obj.AMP_THRESHOLD);
+%             Envelope = obj.traceEnvelope(obj.Signal);
+%             AboveThreshold = (Envelope > obj.AMP_THRESHOLD);
+%             
+%             % Place vibrato where signal is above amplitude threshold.
+%             obj.CandidateTimeline = obj.CandidateTimeline .* AboveThreshold;
+             
+            % Find stable notes (call Xiaohan external function).
+            StableTimeline = findStable(obj.Signal, obj.fs);
             
-            %   Don't place vibrato where signal is below amplitude threshold.
-            obj.CandidateTimeline = obj.CandidateTimeline .* AboveThreshold;
+%             % Debugging.
+%             figure; plot(StableTimeline); hold on; 
+%             plot(obj.CandidateTimeline); hold off; 
+%             pause;
+
+            obj.CandidateTimeline = obj.CandidateTimeline .* StableTimeline;
+            
         end
         
         function Envelope = traceEnvelope(obj, Signal)
@@ -102,7 +114,7 @@ classdef RandomVibrato < handle
             b = 1/M * ones(M, 1);
             Envelope = filter(b, 1, EnvelopeApprox);
             
-            % compensate for group delay
+            % Compensate for group delay.
             Envelope = circshift(Envelope, -floor(M/2));
             Envelope = Envelope/max(abs(Envelope));
         end
@@ -116,8 +128,9 @@ classdef RandomVibrato < handle
             FoundAnIndex = false;
             
             for i = randperm(length(NonZeroIndicies))
-                %   Check for a length of 1's long enough for vibrato.
-                if prod(Timeline(i:i + obj.VibratoLength - 1) == 1)
+                % Check for a length of 1's long enough for vibrato.
+                effectiveVibLength = floor(VIB_EFFECTIVE_LENGTH * obj.VibratoLength);
+                if prod(Timeline(i:i + effectiveVibLength - 1) == 1)
                     FoundAnIndex = true;
                     break
                 end
@@ -131,19 +144,19 @@ classdef RandomVibrato < handle
         end
         
         function obj = makeVibIndexAndAmplitude(obj)
-            %   Values to index the vibrato modulation oscillator.
+            % Values to index the vibrato modulation oscillator.
             obj.VibIndex = [zeros(obj.VibStart, 1); (1:obj.VibratoLength)'; ...
                 zeros(length(obj.Signal) - (obj.VibStart + obj.VibratoLength), 1)];
             
-            %   Amplitude values for the vibrato oscillator (fades in/out).
+            % Amplitude values for the vibrato oscillator (fades in/out).
             obj.VibModAmplitude = [zeros(obj.VibStart, 1); ...
                 obj.SamplesDeviation * hamming(obj.VibratoLength); ...
                 zeros(length(obj.Signal) - (obj.VibStart + obj.VibratoLength), 1)];
         end
         
         function Out = generateOutput(obj)
-            %   Step through signal with modulated fractional indicies to
-            %   build vibrato'ed output.
+            % Step through signal with modulated fractional indicies to
+            % build vibrato'ed output.
             
             Out = zeros(size(obj.Signal));
             

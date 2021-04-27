@@ -63,29 +63,32 @@ classdef StimulusGenerator < handle
     
     properties (Constant)
         
-        %   Settings for artificial vibrato.
+        % Settings for artificial vibrato.
         VIB_RATE = 11;
-        VIB_ALPHA = 0.005;
+        VIB_ALPHA = 0.01;
         VIB_CYCLES = 3;
-        NO_VIB_BUFFER = 2;
+        NO_VIB_BUFFER = 1.5;
         
-        %   Settings for cues.
+        % Settings for cues.
         CUE_LENGTH = 1.5;
         CUE_FADE = 0.1;
         
-        %   Output ceiling.
+        % Output ceiling.
         MAGNITUDE_REF = 5e4
         EPS = 0.01;
         
-        %   Directory with individual tracks.
+        % Directory with individual tracks.
         STIM_DIR = "audio/processed/";
         LOG_DIR = "logs/";
     end
     
     methods
         
-        %   Constructor
+        % Constructor.
         function obj = StimulusGenerator(Filename1, Filename2)
+            fprintf("Generating mix for %s and %s...\n", ...
+                Filename1, Filename2);
+            
             obj.Filename1 = Filename1;
             obj.Filename2 = Filename2;
                         
@@ -98,9 +101,15 @@ classdef StimulusGenerator < handle
             obj.parseFilenames();
             
             obj.inputCheck();
-            obj.matchLoudness();
+%             obj.matchLoudness();
             
-            obj.makeVibStim();
+            try
+                obj.makeVibStim();
+            catch ME
+                warning(ME.message)
+                return;
+            end
+            
             obj.makeMixes();
             obj.makeCues();
             
@@ -337,7 +346,7 @@ classdef StimulusGenerator < handle
         end
         
         function obj = matchLoudness(obj)
-            %   Match gains of both stimuli to magnitude reference.
+            % Match gains of both stimuli to magnitude reference.
             Mag1 = obj.calcPerceptMag(obj.x1);
             Mag2 = obj.calcPerceptMag(obj.x2);
 
@@ -363,14 +372,26 @@ classdef StimulusGenerator < handle
             end
             
             if (WhichVib == 1 || DoBoth)
-                obj.x1Vib = obj.VibGenerator.addVibrato(obj.x1);
+                try
+                    obj.x1Vib = obj.VibGenerator.addVibrato(obj.x1);
+                catch
+                    error('No stable regions found in %s...', ...
+                        obj.Filename1)
+                end
+                
                 Location1 = obj.VibGenerator.VibStart;
 
                 obj.x1VibStart = Location1 / obj.fs;
             end
             
             if (WhichVib == 2 || DoBoth)
-                obj.x2Vib = obj.VibGenerator.addVibrato(obj.x2);
+                try
+                    obj.x2Vib = obj.VibGenerator.addVibrato(obj.x2);
+                catch
+                    error('No stable regions found in %s...', ...
+                        obj.Filename2)
+                end
+                    
                 Location2 = obj.VibGenerator.VibStart;   
 
                 obj.x2VibStart = Location2 / obj.fs;

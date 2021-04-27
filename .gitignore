@@ -5,8 +5,9 @@
 *.wav
 *.mp3
 
-# Matlab open files.
+# Matlab stuff.
 *.m~
+*.mat
 
 # Logs.
 *.txt

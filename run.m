@@ -28,11 +28,11 @@
 %   M[melody]_P1_[inst1]_P2_[inst2]_N.wav    -->    mixture, vibrato in 2nd
 %
 
-AUDIO_DIR = './audio';
+AUDIO_DIR = './audio';  
 RawPath = fullfile(AUDIO_DIR, 'raw/*.wav');
 RawFiles = dir(RawPath);
 
 % Process every pair (every second entry).
-for k = 1:2:length(rawFiles)
+for k = 1:2:length(RawFiles)
     StimulusGenerator(RawFiles(k).name, RawFiles(k+1).name);
 end
