@@ -12,3 +12,5 @@
 # Logs.
 *.txt
 
+# Big files.
+*.zip

@@ -31,10 +31,20 @@
 clear; clc;
 
 AUDIO_DIR = './audio';  
-RawPath = fullfile(AUDIO_DIR, 'raw/*.wav');
+
+% Note, you'll have to specify both batches individually. Batch1, then
+% Batch2. This allows both wavs in the duets to find each other. Sorry.
+RawPath = fullfile(AUDIO_DIR, 'raw/Batch1/*.wav');
 RawFiles = dir(RawPath);
 
 % Process every pair (every second entry).
+for k = 1:2:length(RawFiles)
+    StimulusGenerator(RawFiles(k).name, RawFiles(k+1).name);
+end
+
+RawPath = fullfile(AUDIO_DIR, 'raw/Batch2/*.wav');
+RawFiles = dir(RawPath);
+
 for k = 1:2:length(RawFiles)
     StimulusGenerator(RawFiles(k).name, RawFiles(k+1).name);
 end
