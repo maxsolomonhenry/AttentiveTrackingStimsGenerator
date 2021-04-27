@@ -129,8 +129,16 @@ classdef RandomVibrato < handle
             
             for i = randperm(length(NonZeroIndicies))
                 % Check for a length of 1's long enough for vibrato.
-                effectiveVibLength = floor(VIB_EFFECTIVE_LENGTH * obj.VibratoLength);
-                if prod(Timeline(i:i + effectiveVibLength - 1) == 1)
+                VibWidth = ...
+                    floor(obj.VIB_EFFECTIVE_LENGTH * obj.VibratoLength/2);
+                
+                tmpIdx = NonZeroIndicies(i);
+                
+                % If 90 percent of the region is 1's, consider it stable
+                % enough.
+                fprintf('Stability: %.2f\n', mean(Timeline(tmpIdx - VibWidth:tmpIdx + VibWidth)));
+                
+                if mean(Timeline(tmpIdx - VibWidth:tmpIdx + VibWidth)) > 0.9
                     FoundAnIndex = true;
                     break
                 end

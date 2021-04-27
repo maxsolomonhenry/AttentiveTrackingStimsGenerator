@@ -32,7 +32,7 @@ function env = findStable(wav, fs)
     thisFrame = wav(idx + (1:lenFrame));
     countFrame = 0;
     
-    while idx + lenFrame < len    
+    while (idx + 2 * lenFrame - 1) < len    
         countFrame = countFrame + 1;
         lastFrame = thisFrame;    
         idx = idx + lenFrame;

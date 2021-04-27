@@ -28,6 +28,8 @@
 %   M[melody]_P1_[inst1]_P2_[inst2]_N.wav    -->    mixture, vibrato in 2nd
 %
 
+clear; clc;
+
 AUDIO_DIR = './audio';  
 RawPath = fullfile(AUDIO_DIR, 'raw/*.wav');
 RawFiles = dir(RawPath);

@@ -101,14 +101,9 @@ classdef StimulusGenerator < handle
             obj.parseFilenames();
             
             obj.inputCheck();
-%             obj.matchLoudness();
+            obj.matchLoudness();
             
-            try
-                obj.makeVibStim();
-            catch ME
-                warning(ME.message)
-                return;
-            end
+            obj.makeVibStim();
             
             obj.makeMixes();
             obj.makeCues();
@@ -372,12 +367,12 @@ classdef StimulusGenerator < handle
             end
             
             if (WhichVib == 1 || DoBoth)
-                try
-                    obj.x1Vib = obj.VibGenerator.addVibrato(obj.x1);
-                catch
-                    error('No stable regions found in %s...', ...
-                        obj.Filename1)
-                end
+%                 try
+                obj.x1Vib = obj.VibGenerator.addVibrato(obj.x1);
+%                 catch
+%                     error('No stable regions found in %s...', ...
+%                         obj.Filename1)
+%                 end
                 
                 Location1 = obj.VibGenerator.VibStart;
 
@@ -385,12 +380,8 @@ classdef StimulusGenerator < handle
             end
             
             if (WhichVib == 2 || DoBoth)
-                try
-                    obj.x2Vib = obj.VibGenerator.addVibrato(obj.x2);
-                catch
-                    error('No stable regions found in %s...', ...
-                        obj.Filename2)
-                end
+
+                obj.x2Vib = obj.VibGenerator.addVibrato(obj.x2);
                     
                 Location2 = obj.VibGenerator.VibStart;   
 
