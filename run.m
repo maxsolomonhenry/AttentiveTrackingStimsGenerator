@@ -25,7 +25,7 @@
 %
 %   M[melody]_P1_[inst1]_P2_[inst2]_N.wav    -->    mixture, no vibrato
 %   M[melody]_P1_[inst1]_P2_[inst2]_V_P1.wav -->    mixture, vibrato in 1st 
-%   M[melody]_P1_[inst1]_P2_[inst2]_N.wav    -->    mixture, vibrato in 2nd
+%   M[melody]_P1_[inst1]_P2_[inst2]_V_P2.wav -->    mixture, vibrato in 2nd
 %
 
 clear; clc;
