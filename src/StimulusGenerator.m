@@ -86,8 +86,6 @@ classdef StimulusGenerator < handle
         
         % Constructor.
         function obj = StimulusGenerator(Filename1, Filename2)
-            fprintf("Generating mix for %s and %s...\n", ...
-                Filename1, Filename2);
             
             obj.Filename1 = Filename1;
             obj.Filename2 = Filename2;
@@ -95,21 +93,24 @@ classdef StimulusGenerator < handle
             [obj.x1, obj.fs] = audioread(Filename1);
             [obj.x2, ~] = audioread(Filename2);
             
-            obj.VibGenerator = RandomVibrato(obj.fs, obj.VIB_RATE, ...
-                obj.VIB_ALPHA, obj.VIB_CYCLES, obj.NO_VIB_BUFFER);
-            
-            obj.parseFilenames();
-            
             obj.inputCheck();
             obj.matchLoudness();
             
-            obj.makeVibStim();
+            obj.VibGenerator = RandomVibrato(obj.fs, obj.VIB_RATE, ...
+                obj.VIB_ALPHA, obj.VIB_CYCLES, obj.NO_VIB_BUFFER);
             
-            obj.makeMixes();
-            obj.makeCues();
-            
-            obj.writeStimuli();
         end
+        
+%             
+%             obj.parseFilenames();
+%             
+%             
+%             obj.makeVibStim();
+%             
+%             obj.makeMixes();
+%             obj.makeCues();
+%             
+%             obj.writeStimuli();
         
         function obj = parseFilenames(obj)
             Basename1 = obj.getBasename(obj.Filename1);
@@ -137,97 +138,24 @@ classdef StimulusGenerator < handle
             obj.MixVib2 = obj.x1 + obj.x2Vib;
         end
         
-        function obj = makeCues(obj)
+        function cueAudio = makeCue(obj, whichCue)
             CueLengthInSamps = floor(obj.CUE_LENGTH * obj.fs);
             FadeSamps = floor(obj.CUE_FADE * obj.fs);
             Window = hamming(2 * FadeSamps);
             
-            obj.Cue1 = obj.x1(1:CueLengthInSamps);
-            obj.Cue2 = obj.x2(1:CueLengthInSamps);
+            tmp = NaN;
+            
+            if whichCue == "top"
+                tmp = obj.x1;
+            elseif whichCue == "bottom"
+                tmp = obj.x2;
+            end
+            
+            cueAudio = tmp(1:CueLengthInSamps);
             
             %   Apply fade-out
-            obj.Cue1(end-FadeSamps + 1:end) = ...
-                obj.Cue1(end-FadeSamps+1:end) .* Window(FadeSamps+1:end);
-            obj.Cue2(end-FadeSamps + 1:end) = ...
-                obj.Cue2(end-FadeSamps+1:end) .* Window(FadeSamps+1:end);
-        end
-
-        function auditionStimuli(obj)
-            
-            disp('Auditioning cues...')
-            obj.auditionCues();
-
-            disp('Auditioning vibrato...')
-            obj.auditionVibStim();
-
-            disp('Auditioning mixes...')
-            obj.auditionMixes();
-        end
-        
-        function auditionCues(obj, WhichCue)
-            DoBoth = false;
-            CuePause = length(obj.Cue1)/obj.fs + 0.5;
-            
-            if nargin == 1
-                DoBoth = true;
-                WhichCue = 0;
-            end
-            
-            if (WhichCue == 1 || DoBoth)
-                sound(obj.Cue1, obj.fs);
-                pause(CuePause);
-            end
-
-            if (WhichCue == 2 || DoBoth)
-                sound(obj.Cue2, obj.fs);
-                pause(CuePause);
-            end
-        end
-        
-        function auditionVibStim(obj, WhichVib)
-            DoBoth = false;            
-            StimPause = length(obj.x1)/obj.fs;
-            
-            if nargin == 1
-                DoBoth = true;
-                WhichVib = 0;
-            end
-            
-            if (WhichVib == 1 || DoBoth)
-                sound(obj.x1Vib, obj.fs);
-                pause(StimPause);
-            end
-
-            if (WhichVib == 2 || DoBoth)
-                sound(obj.x2Vib, obj.fs);
-                pause(StimPause);
-            end
-        end
-        
-        function auditionMixes(obj, WhichMix)
-            DoAll = false;
-            StimPause = length(obj.x1)/obj.fs;
-            
-            if nargin == 1
-                DoAll = true;
-                WhichMix = 0;
-            end
-
-            if (WhichMix == 1 || DoAll)
-                sound(obj.MixVib1, obj.fs);
-                pause(StimPause);
-            end
-
-            if (WhichMix == 2 || DoAll)
-                sound(obj.MixVib2, obj.fs);
-                pause(StimPause);
-            end
-            
-            if (WhichMix == 3 || DoAll)
-                sound(obj.MixNoVib, obj.fs);
-                pause(StimPause);
-            end
-            
+            cueAudio(end-FadeSamps + 1:end) = ...
+                cueAudio(end-FadeSamps+1:end) .* Window(FadeSamps+1:end);
         end
         
         function writeStimuli(obj)
@@ -346,47 +274,38 @@ classdef StimulusGenerator < handle
             Mag2 = obj.calcPerceptMag(obj.x2);
 
             obj.x1 = obj.x1 * obj.MAGNITUDE_REF/Mag1;
-            obj.GainChange1 = obj.Filename1 + " * " + ...
-                num2str(obj.MAGNITUDE_REF/Mag1);
-            
             obj.x2 = obj.x2 * obj.MAGNITUDE_REF/Mag2;
-            obj.GainChange2 = obj.Filename2 + " * " + ...
-                num2str(obj.MAGNITUDE_REF/Mag2);
 
             %   Divide gain by half to avoid clipping in mixes.
             obj.x1 = obj.x1/2;
             obj.x2 = obj.x2/2;
         end
         
-        function obj = makeVibStim(obj, WhichVib)
-            DoBoth = false;
+        function [mixture, vibStartSeconds] = makeMixture(obj, whichVib)
             
-            if nargin == 1
-                DoBoth = true;
-                WhichVib = 0;
+            vibAudio = NaN;
+            passAudio = NaN;
+            
+            if whichVib == "none"
+                mixture = obj.x1 + obj.x2;
+                vibStartSeconds = NaN;
+                return
             end
             
-            if (WhichVib == 1 || DoBoth)
-%                 try
-                obj.x1Vib = obj.VibGenerator.addVibrato(obj.x1);
-%                 catch
-%                     error('No stable regions found in %s...', ...
-%                         obj.Filename1)
-%                 end
-                
-                Location1 = obj.VibGenerator.VibStart;
-
-                obj.x1VibStart = Location1 / obj.fs;
+            if whichVib == "top"                
+                vibAudio = obj.x1;
+                passAudio = obj.x2;
+            elseif whichVib == "bottom"  
+                vibAudio = obj.x2;
+                passAudio = obj.x1;
             end
             
-            if (WhichVib == 2 || DoBoth)
-
-                obj.x2Vib = obj.VibGenerator.addVibrato(obj.x2);
-                    
-                Location2 = obj.VibGenerator.VibStart;   
-
-                obj.x2VibStart = Location2 / obj.fs;
-            end
+            
+            vibAudio = obj.VibGenerator.addVibrato(vibAudio);
+            
+            mixture = vibAudio + passAudio;
+            vibStartSeconds = obj.VibGenerator.VibStart / obj.fs;
+            
         end
         
         function PerceptMag = calcPerceptMag(obj, x)
