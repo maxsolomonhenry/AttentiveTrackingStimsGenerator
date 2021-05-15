@@ -18,7 +18,7 @@
 % The table specifies melody names, condition names, which track to cue,
 % which track to add an artificial vibrato to, and for which track to 
 % generate a probe note. The script randomly determines the vibrato 
-% placement, and wether the bottom or top part is probed.
+% placement, and whether the bottom or top part is probed.
 %
 % Please specify the participantId at the top of the script.
 
