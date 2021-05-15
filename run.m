@@ -41,10 +41,3 @@ RawFiles = dir(RawPath);
 for k = 1:2:length(RawFiles)
     StimulusGenerator(RawFiles(k).name, RawFiles(k+1).name);
 end
-
-RawPath = fullfile(AUDIO_DIR, 'raw/Batch2/*.wav');
-RawFiles = dir(RawPath);
-
-for k = 1:2:length(RawFiles)
-    StimulusGenerator(RawFiles(k).name, RawFiles(k+1).name);
-end
