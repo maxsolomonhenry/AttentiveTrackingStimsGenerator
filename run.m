@@ -1,43 +1,146 @@
-% Max Henry, for MPCL/McGill Attentive Tracking Experiment. 2020/2021.
+% Generate stimuli for "Effect of Timbre on Top-Down Attention in
+% Contemporary Composition" experiment.
+% 
+% Author: Max Henry
+% 2020 – 2021.
 %
-% This generates stimuli from all audio in '/audio/raw'
+% This generates stimuli from duet stems in `/audio/raw`, which should
+% follow this naming convention:
 %
-% For the moment, this assumes that only matched pairs are in the raw audio
-% folder: i.e., only one instrument per melody/part. In this case the pairs
-% should line up nicely in the dir order. Otherwise the automatic pairing 
-% will get messed up.
-%
-% This script is old and the API is whack. Sorry. It's expecting a few
-% things:
-%
-% Input file naming convention: 
-%
-%       M[melody]_P[part]_[instrument].wav
+%       `M[melody]_P[part]_[instrument].wav`
 %      
-% e.g., M1_P1_Tpt.wav --> melody #1, top part, trumpet.
+% e.g., Mmin2crossing_P1_Tpt.wav --> "min2crossing," top part, trumpet.
 %
-% The output names are equally cryptic. For each pair, it outputs 5 files:
-% (n.b., "cues" are the first ~1.5 seconds of a file, as specified in the
-% StimulusGenerator script. Gross, I know.)
+% Melody names and output conditions are specified in the csv file:
+%   
+%   `/data/stimulus_table.csv`. 
 %
-%   [whole filename 1]_q.wav --> a short cue for the first instrument.   
-%   [whole filename 2]_q.wav --> a short cue for the second instrument.
+% The table specifies melody names, condition names, which track to cue,
+% which track to add an artificial vibrato to, and for which track to 
+% generate a probe note. The script randomly determines the vibrato 
+% placement, and wether the bottom or top part is probed.
 %
-%   M[melody]_P1_[inst1]_P2_[inst2]_N.wav    -->    mixture, no vibrato
-%   M[melody]_P1_[inst1]_P2_[inst2]_V_P1.wav -->    mixture, vibrato in 1st 
-%   M[melody]_P1_[inst1]_P2_[inst2]_V_P2.wav -->    mixture, vibrato in 2nd
-%
+% Please specify the participantId at the top of the script.
 
 clear; clc;
 
-AUDIO_DIR = './audio';  
+% Parameters.
+participantId = '01';
+silenceSeconds = 1;
 
-% Note, you'll have to specify both batches individually. Batch1, then
-% Batch2. This allows both wavs in the duets to find each other. Sorry.
-RawPath = fullfile(AUDIO_DIR, 'raw/Batch1/*.wav');
-RawFiles = dir(RawPath);
+% Debugging.
+toggleVerbose = true;
 
-% Process every pair (every second entry).
-for k = 1:2:length(RawFiles)
-    StimulusGenerator(RawFiles(k).name, RawFiles(k+1).name);
+% Preliminaries.
+stimulusTable = readtable('data/stimulus_table.csv');
+
+% Make participant directory.
+participantDir = "audio/processed/" + participantId;
+mkdir(participantDir);
+addpath(fullfile(pwd, participantDir));
+
+% Setup log.
+logPath = participantDir + "/log.txt";
+fid = fopen(logPath, 'wt');
+today = datestr(datetime);
+fprintf(fid, "\nDate:\t" + today);
+fprintf(fid, "\n================================\n");
+
+
+for i = 1:height(stimulusTable)
+
+    stimulusFilename = stimulusTable.trial_id{i} + ".wav";
+
+    melody = stimulusTable.melody_name{i};
+
+    tmp = stimulusTable.instrument{i};
+    tmp = strsplit(tmp, '-');
+    topInstrument = tmp{1};
+    bottomInstrument = tmp{2};
+
+    filename1 = melody + "_P1_" + topInstrument + ".wav";
+    filename2 = melody + "_P2_" + bottomInstrument + ".wav";
+
+    whichCue = stimulusTable.cue{i};
+
+    whichVib = stimulusTable.vib{i};
+    whichVib = makeExplicit(whichVib, whichCue);
+
+    probeTop = stimulusTable.probe_top{i};
+    probeBottom = stimulusTable.probe_bottom{i};
+
+    probeTop = convertCharsToStrings(probeTop);
+    probeBottom = convertCharsToStrings(probeBottom);
+
+    % Init stimgen object.
+    generator = StimulusGenerator(filename1, filename2);
+
+    % Generate cue from `whichCue` track.
+    cueAudio = generator.makeCue(whichCue);
+
+    % Generate mixture with vibrato in `whichVib` track.
+    [mixture, vibStartSeconds] = generator.makeMixture(whichVib);
+
+    % Randomly select probe.
+    tmp = randi([1, 2]);
+
+    tmpChoice = ["top", "bottom"];
+    whichProbe = tmpChoice(tmp);
+
+    tmpChoice = [probeTop, probeBottom];
+    probeFile = tmpChoice(tmp) + ".wav";
+    probeAudio = getProbeAudio(probeFile);
+
+    numSilenceSamples = round(silenceSeconds * generator.fs);
+    silence = zeros(numSilenceSamples, 1);
+
+    x = [cueAudio; silence; mixture; silence; probeAudio];
+
+    % Write audio to file.
+    stimulusPath = participantDir + "/" + stimulusFilename;
+    audiowrite(stimulusPath, x, generator.fs);
+    
+    % A constant to add to vib time to adjust for preceding cue and silence.
+    tmpOffset = generator.CUE_LENGTH + silenceSeconds;
+    
+    logString = sprintf(...
+        "\nfile:\t%s\nvib:\t%.2f seconds\nprobe:\t%s\n\n", ...
+        stimulusFilename, vibStartSeconds + tmpOffset, whichProbe...
+    )
+    
+    if toggleVerbose
+        fprintf(logString);
+    end
+
+    % Write to log.
+    fprintf(fid, logString);
+
+end
+
+% Close the log file.
+fclose(fid);
+
+% Helper functions.
+
+function whichVib = makeExplicit(whichVib, whichCue)
+% Translates `whichVib` from 'cued/uncued' to 'top/bottom'.
+
+    if whichVib == "none"
+        return
+    end
+
+    if strcmp(whichVib, whichCue)
+        whichVib = whichCue;
+    elseif whichCue == "top"
+        whichVib = "bottom";
+    elseif whichCue == "bottom"
+        whichVib = "top";
+    end
+end
+
+function [probeAudio, fs] = getProbeAudio(probeFile)
+    [probeAudio, fs] = audioread(probeFile);
+    if size(probeAudio, 2) ~= 1
+        probeAudio = probeAudio(:, 1);
+    end
 end

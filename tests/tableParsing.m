@@ -1,9 +1,15 @@
+% ** NOTE ** this is deprecated. Please use the `run.m` script instead.
+% Thank you -the management.
+%
+% Author: Max Henry.
+% May 2021.
+
 % Preliminaries.
 stimulusTable = readtable('data/stimulus_table.csv');
 
 % Parameters.
-participantId = '001';
-silenceSeconds = 0.6;
+participantId = '01';
+silenceSeconds = 1;
 
 % Make participant directory.
 participantDir = "audio/processed/" + participantId;
