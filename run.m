@@ -22,7 +22,7 @@
 %
 % Please specify the participantId at the top of the script.
 
-clear; clc;
+clear; clc; addpath(genpath('.'));
 
 % Parameters.
 participantId = '01';
